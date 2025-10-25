@@ -57,6 +57,7 @@ function votelock_settings_page_content() {
             votelock_handle_settings_save();
         }
         
+        // Use the globally defined helper function
         $settings = votelock_get_settings();
         ?>
         
@@ -112,17 +113,6 @@ function votelock_handle_settings_save() {
     }
 }
 
-/**
- * Retrieves the stored plugin settings.
- * @return array
- */
-function votelock_get_settings() {
-    $defaults = [
-        'form_id' => 0,
-        'page_id' => 0
-    ];
-    return get_option( 'votelock_plugin_settings', $defaults );
-}
 
 // --- KEY GENERATOR PAGE CONTENT ---
 
@@ -158,14 +148,14 @@ function votelock_keys_generator_page_content() {
 }
 
 
-// --- KEY GENERATION LOGIC (FIXED) ---
+// --- KEY GENERATION LOGIC ---
 
 function votelock_handle_key_generation() {
     if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'votelock_generate_keys' ) ) {
         wp_die( 'Security check failed.', 403 );
     }
     
-    // FIX: Use null coalescing operator (??) to prevent the "Undefined array key" warning
+    // FIXED: Use null coalescing operator (??) to prevent the "Undefined array key" warning
     $role = sanitize_key( $_POST['role'] ?? '' ); 
     
     if ( empty( $role ) ) {
@@ -192,13 +182,14 @@ function votelock_handle_key_generation() {
     echo '<div class="notice notice-success is-dismissible"><p>✅ Generated ' . absint($users_inserted) . ' new keys for users with the "<strong>' . esc_html($role) . '</strong>" role.</p></div>';
 }
 
-// --- KEY EXPORT LOGIC (Same as before) ---
+// --- KEY EXPORT LOGIC ---
 
 function votelock_handle_key_export() {
     if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'votelock_generate_keys' ) ) {
         wp_die( 'Security check failed.', 403 );
     }
 
+    // Use the globally defined helper function
     $settings = votelock_get_settings();
     $ballot_page_id = $settings['page_id']; 
 
