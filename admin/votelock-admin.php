@@ -141,8 +141,12 @@ function votelock_keys_generator_page_content() {
         <form method="post">
             <?php wp_nonce_field( 'votelock_generate_keys' ); ?>
             <p>
-                <label for="role">Target Users by Role:</label>
-                <?php wp_dropdown_roles(); // Generates a <select> with user roles ?> 
+                <label for="votelock_role">Target Users by Role:</label>
+                
+                <select name="role" id="votelock_role" required>
+                    <?php wp_dropdown_roles(); // Outputs <option> tags ?> 
+                </select>
+                
             </p>
             <p class="submit">
                 <input type="submit" name="votelock_generate" class="button button-primary" value="Generate Keys for Selected Role">
@@ -154,17 +158,24 @@ function votelock_keys_generator_page_content() {
 }
 
 
-// --- KEY GENERATION AND EXPORT LOGIC (Same as before) ---
+// --- KEY GENERATION LOGIC (FIXED) ---
 
 function votelock_handle_key_generation() {
-    // ... (Key generation logic is the same)
     if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'votelock_generate_keys' ) ) {
         wp_die( 'Security check failed.', 403 );
     }
     
+    // FIX: Use null coalescing operator (??) to prevent the "Undefined array key" warning
+    $role = sanitize_key( $_POST['role'] ?? '' ); 
+    
+    if ( empty( $role ) ) {
+        echo '<div class="notice notice-error is-dismissible"><p>⚠️ Please select a user role.</p></div>';
+        return;
+    }
+    
     global $wpdb;
     $table_name = $wpdb->prefix . 'votelock_access_keys';
-    $role = sanitize_key( $_POST['role'] );
+    
     $user_query = new WP_User_Query( array( 'role' => $role, 'fields' => 'ID' ) );
     $users_inserted = 0;
 
@@ -180,6 +191,8 @@ function votelock_handle_key_generation() {
     
     echo '<div class="notice notice-success is-dismissible"><p>✅ Generated ' . absint($users_inserted) . ' new keys for users with the "<strong>' . esc_html($role) . '</strong>" role.</p></div>';
 }
+
+// --- KEY EXPORT LOGIC (Same as before) ---
 
 function votelock_handle_key_export() {
     if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'votelock_generate_keys' ) ) {
