@@ -54,7 +54,7 @@ function votelock_access_gate_handler( $atts ) {
     // --- 1. Key Consumption and Form Display ---
 
     if ( $consent_submitted ) {
-        // The user submitted the confirmation form (Step 2 is true).
+        // The user submitted the confirmation form.
         
         // Final check on the nonce
         if ( ! check_admin_referer( 'votelock_consent_check_' . $user_id ) ) {
@@ -69,15 +69,14 @@ function votelock_access_gate_handler( $atts ) {
 
     } 
     
-    // --- 2. Confirmation Prompt ---
+    // --- 2. Confirmation Prompt (Initial Page Load) ---
     
-    // The user just landed on the page with a valid key (Step 2 is false).
     ob_start();
     ?>
     <div class="votelock-confirmation-box" style="padding: 20px; border: 1px solid #ffcc00; background-color: #fff8e1; border-radius: 5px;">
         <h3 style="margin-top: 0;">🛑 Are You Ready to Vote?</h3>
         <p>By clicking "Yes, I Agree," your unique access key will be **permanently consumed.**</p>
-        <p>You **will not be able** to come back later if you navigate away from the ballot, and administrators will **not be able to reset** your access.</p>
+        <p>You **will not be able** to come back later if you navigate away from the ballot, and admins **will not be able to reset** your access.</p>
         
         <form method="post" action="<?php echo esc_url( add_query_arg( 'key', $key_param, get_permalink() ) ); ?>">
             <?php wp_nonce_field( 'votelock_consent_check_' . $user_id ); ?>
