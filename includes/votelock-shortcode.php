@@ -75,7 +75,7 @@ function votelock_access_gate_handler( $atts ) {
     ?>
     <div class="votelock-confirmation-box" style="padding: 20px; border: 1px solid #ffcc00; background-color: #fff8e1; border-radius: 5px;">
         <h3 style="margin-top: 0;">🛑 Are You Ready to Vote?</h3>
-        <p>By clicking <strong>"Yes, I Agree,"</strong> your unique access key will be <strong>**permanently consumed.**<</strong></p>
+        <p>By clicking <strong>"Yes, I Agree,"</strong> your unique access key will be <strong>**permanently consumed.**</strong></p>
         <p>You <strong>**will not be able**</strong> to come back later if you navigate away from the ballot, and admins <strong>**will not be able to reset**</strong> your access.</p>
         
         <form method="post" action="<?php echo esc_url( add_query_arg( 'key', $key_param, get_permalink() ) ); ?>">
