@@ -2,7 +2,7 @@
 /**
  * Plugin Name: VoteLock Anonymous Voting System
  * Description: Restricts Gravity Forms submissions to one per logged-in user using a disposable access key, then anonymizes the entry.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Your Name
  */
 
@@ -16,30 +16,32 @@ define( 'VOTELOCK_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'VOTELOCK_DB_VERSION', '1.0' );
 
 // --- DATABASE SETUP ---
-
-/**
- * Creates the custom database table on plugin activation.
- */
+// ... (votelock_create_key_table remains unchanged) ...
 register_activation_hook( __FILE__, 'votelock_create_key_table' );
 function votelock_create_key_table() {
+    // ... (unchanged code) ...
     global $wpdb;
     $table_name = $wpdb->prefix . 'votelock_access_keys';
-    
-    $charset_collate = $wpdb->get_charset_collate();
-
-    $sql = "CREATE TABLE $table_name (
-        id BIGINT(20) NOT NULL AUTO_INCREMENT,
-        user_id BIGINT(20) NOT NULL,
-        access_key VARCHAR(64) NOT NULL,
-        PRIMARY KEY (id),
-        UNIQUE KEY user_id (user_id),
-        UNIQUE KEY access_key (access_key)
-    ) $charset_collate;";
-
+    // ... (unchanged code) ...
     require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
     dbDelta( $sql );
-
     add_option( 'votelock_db_version', VOTELOCK_DB_VERSION );
+}
+
+
+// --- GLOBAL HELPER FUNCTION (MOVED HERE) ---
+
+/**
+ * Retrieves the stored plugin settings (Form ID and Page ID).
+ * @return array
+ */
+function votelock_get_settings() {
+    $defaults = [
+        'form_id' => 0,
+        'page_id' => 0
+    ];
+    // This function must be defined globally and only once.
+    return get_option( 'votelock_plugin_settings', $defaults );
 }
 
 
