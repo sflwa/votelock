@@ -9,11 +9,11 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-// Ensure the hook is added after settings are loaded (usually 'init' or 'admin_init')
+// Ensure the hook is added after settings are loaded
 add_action( 'init', 'votelock_register_gf_hook' );
 
 function votelock_register_gf_hook() {
-    // Get settings dynamically
+    // Use the globally defined helper function
     $settings = votelock_get_settings();
     $target_form_id = $settings['form_id'];
 
@@ -32,7 +32,7 @@ function votelock_anonymize_and_destroy_key( $entry, $form ) {
     $entry_id = rgar( $entry, 'id' );
 
     if ( empty( $user_id ) || ! is_numeric( $user_id ) || absint($user_id) === 0 ) {
-        return; // Safety check
+        return; 
     }
     
     // 1. DELETE THE ACCESS KEY (Enforces single-submission)
@@ -42,21 +42,11 @@ function votelock_anonymize_and_destroy_key( $entry, $form ) {
     $wpdb->update( 
         $entry_table, 
         array( 
-            'created_by' => 0,  
-            'ip' => ''          
+            'created_by' => 0,  // Set to 0 to break the link to the user
+            'ip' => ''          // Clear IP for maximum anonymity
         ), 
         array( 'id' => absint($entry_id) ), 
         array( '%d', '%s' ), 
         array( '%d' ) 
     );
-}
-
-// NOTE: We must ensure votelock_get_settings is available here.
-// Since votelock-admin.php is loaded by the main plugin file, this is usually fine, 
-// but defining a helper in the main file is safer.
-if ( ! function_exists( 'votelock_get_settings' ) ) {
-    function votelock_get_settings() {
-        $defaults = [ 'form_id' => 0, 'page_id' => 0 ];
-        return get_option( 'votelock_plugin_settings', $defaults );
-    }
 }
