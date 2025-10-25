@@ -57,7 +57,7 @@ function votelock_settings_page_content() {
             votelock_handle_settings_save();
         }
         
-        // Use the globally defined helper function
+        // Assumes votelock_get_settings() is defined in the main plugin file
         $settings = votelock_get_settings();
         ?>
         
@@ -127,19 +127,14 @@ function votelock_keys_generator_page_content() {
     ?>
     <div class="wrap">
         <h2>Generate and Export Voting Keys</h2>
-        <p>Use the generator below to create unique, one-time access keys for users based on their role.</p>
+        <p>This tool manages the one-time access keys required for users to vote.</p>
         <form method="post">
             <?php wp_nonce_field( 'votelock_generate_keys' ); ?>
             <p>
-                <label for="votelock_role">Target Users by Role:</label>
-                
-                <select name="role" id="votelock_role" required>
-                    <?php wp_dropdown_roles(); // Outputs <option> tags ?> 
-                </select>
-                
+                <strong>Action:</strong> Generate keys for all users who do not currently have one.
             </p>
             <p class="submit">
-                <input type="submit" name="votelock_generate" class="button button-primary" value="Generate Keys for Selected Role">
+                <input type="submit" name="votelock_generate" class="button button-primary" value="Generate Keys for ALL Users">
                 <input type="submit" name="votelock_export" class="button button-secondary" value="Export ALL Keys to CSV">
             </p>
         </form>
@@ -148,28 +143,27 @@ function votelock_keys_generator_page_content() {
 }
 
 
-// --- KEY GENERATION LOGIC ---
+// --- KEY GENERATION LOGIC (For ALL Users) ---
 
 function votelock_handle_key_generation() {
     if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'votelock_generate_keys' ) ) {
         wp_die( 'Security check failed.', 403 );
     }
     
-    // FIXED: Use null coalescing operator (??) to prevent the "Undefined array key" warning
-    $role = sanitize_key( $_POST['role'] ?? '' ); 
-    
-    if ( empty( $role ) ) {
-        echo '<div class="notice notice-error is-dismissible"><p>⚠️ Please select a user role.</p></div>';
-        return;
-    }
-    
     global $wpdb;
     $table_name = $wpdb->prefix . 'votelock_access_keys';
     
-    $user_query = new WP_User_Query( array( 'role' => $role, 'fields' => 'ID' ) );
+    // Get ALL user IDs
+    $user_query = new WP_User_Query( array( 
+        'fields' => 'ID', 
+        'number' => -1 // Get all users
+    ) );
+    $user_ids = $user_query->get_results();
+    
     $users_inserted = 0;
 
-    foreach ( $user_query->get_results() as $user_id ) {
+    foreach ( $user_ids as $user_id ) {
+        // Check if user already has a key (efficiently)
         $key_exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table_name WHERE user_id = %d", $user_id ) );
         
         if ( ! $key_exists ) {
@@ -179,21 +173,21 @@ function votelock_handle_key_generation() {
         }
     }
     
-    echo '<div class="notice notice-success is-dismissible"><p>✅ Generated ' . absint($users_inserted) . ' new keys for users with the "<strong>' . esc_html($role) . '</strong>" role.</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>✅ Generated ' . absint($users_inserted) . ' new keys for all users who did not have one.</p></div>';
 }
 
-// --- KEY EXPORT LOGIC ---
+// --- KEY EXPORT LOGIC (FIXED for HTML Output) ---
 
 function votelock_handle_key_export() {
     if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'votelock_generate_keys' ) ) {
         wp_die( 'Security check failed.', 403 );
     }
 
-    // Use the globally defined helper function
     $settings = votelock_get_settings();
     $ballot_page_id = $settings['page_id']; 
 
     if ( $ballot_page_id === 0 ) {
+        // Must check this before outputting headers
         echo '<div class="notice notice-error is-dismissible"><p>⚠️ Please configure the **WordPress Ballot Page ID** in the VoteLock Settings before exporting.</p></div>';
         return;
     }
@@ -209,15 +203,28 @@ function votelock_handle_key_export() {
     );
 
     if ( empty( $results ) ) {
+        // Must check this before outputting headers
         echo '<div class="notice notice-warning is-dismissible"><p>No keys available to export.</p></div>';
         return;
     }
 
+    // --- CRITICAL FIX: CLEAR OUTPUT BUFFER ---
+    // Clears any HTML/admin template output that may have accumulated
+    if ( ob_get_level() > 0 ) {
+        ob_clean();
+    }
+    // --- END CRITICAL FIX ---
+
     // Set headers for CSV download
     header( 'Content-Type: text/csv; charset=utf-8' );
     header( 'Content-Disposition: attachment; filename=voting_access_keys_' . time() . '.csv' );
+    header( 'Pragma: no-cache' );
+    header( 'Expires: 0' );
     
     $output = fopen( 'php://output', 'w' );
+    
+    // Add BOM for UTF-8 compatibility with Excel 
+    fprintf( $output, chr(0xEF) . chr(0xBB) . chr(0xBF) );
     
     // CSV Header Row
     $headers = array( 'user_id', 'email', 'access_key', 'full_url' );
@@ -233,5 +240,7 @@ function votelock_handle_key_export() {
     }
     
     fclose( $output );
-    exit;
+    
+    // IMPORTANT: Terminate script execution immediately after outputting file data
+    exit; 
 }
